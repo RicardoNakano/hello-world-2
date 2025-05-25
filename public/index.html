@@ -57,6 +57,7 @@
     <span id="linkedin-spinner" class="spinner"></span>
     <label for="linkedin-message">Post gerado (edite se desejar):</label>
     <textarea id="linkedin-message" readonly></textarea>
+    <button id="clear-asterisks-button" onclick="clearAsterisks()" style="margin-top: 10px;">Limpar Asteriscos</button>
     <button id="linkedin-image-button" onclick="generateLinkedInPostImage()" style="display: none;">Gerar Imagem para o Post</button>
     <span id="linkedin-image-spinner" class="spinner"></span>
     <p id="linkedin-image-message"></p>
@@ -388,6 +389,15 @@
         spinner.style.display = 'none';
       }
     }
+
+    // Função pra limpar asteriscos duplos (**)
+    window.clearAsterisks = function() {
+      const linkedinMessage = document.getElementById('linkedin-message');
+      let text = linkedinMessage.value;
+      // Remove todos os pares de **, mantendo o texto entre eles
+      text = text.replace(/\*\*(.*?)\*\*/g, '$1');
+      linkedinMessage.value = text;
+    };
 
     // Expor as funções no escopo global pra os onclicks
     window.postTweet = postTweet;
