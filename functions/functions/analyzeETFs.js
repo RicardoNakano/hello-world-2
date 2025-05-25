@@ -46,7 +46,13 @@ const analyzeETFs = async () => {
       const formattedPriceCurrent = currentPrice.toFixed(2);
       const formattedSma200Current = sma200Current.toFixed(2);
 
-      currentData.push(`${iconCurrent} - ${symbol} - ${formattedDiffCurrent} - $${formattedPriceCurrent} (MA200=$${formattedSma200Current})`);
+      currentData.push({
+        icon: iconCurrent,
+        symbol: symbol,
+        percentageDiff: formattedDiffCurrent,
+        price: formattedPriceCurrent,
+        sma200: formattedSma200Current
+      });
     }
 
     // --- Dados de duas segundas-feiras atrás ---
@@ -113,15 +119,75 @@ const analyzeETFs = async () => {
       const formattedPrice = lowestPrice.toFixed(2);
       const formattedSma200 = sma200.toFixed(2);
 
-      etfData.push(`${icon} - ${symbol} - ${formattedDiff} - $${formattedPrice} (MA200=$${formattedSma200})`);
+      etfData.push({
+        icon: icon,
+        symbol: symbol,
+        percentageDiff: formattedDiff,
+        price: formattedPrice,
+        sma200: formattedSma200
+      });
     }
 
-    // Construir o tweet com as duas seções
-    const currentSection = `ETF Analysis today (${formattedToday}):\n${currentData.join('\n')}\n\n`;
-    const historicalSection = `ETF Analysis (Two Mondays Ago - ${formattedDate})\nLowest Prices:\n${etfData.join('\n')}`;
-    const tweetText = `${currentSection}${historicalSection}`;
+    // Construir a tabela HTML com as duas seções
+    let tableHtml = `
+      <h3>ETF Analysis Today (${formattedToday})</h3>
+      <table class="mdc-table">
+        <thead>
+          <tr>
+            <th>Status</th>
+            <th>Symbol</th>
+            <th>Percentage Diff</th>
+            <th>Price</th>
+            <th>MA200</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+    currentData.forEach(data => {
+      tableHtml += `
+        <tr>
+          <td>${data.icon}</td>
+          <td>${data.symbol}</td>
+          <td>${data.percentageDiff}</td>
+          <td>$${data.price}</td>
+          <td>$${data.sma200}</td>
+        </tr>
+      `;
+    });
+    tableHtml += `
+        </tbody>
+      </table>
+      <h3>ETF Analysis (Two Mondays Ago - ${formattedDate})</h3>
+      <p>Lowest Prices:</p>
+      <table class="mdc-table">
+        <thead>
+          <tr>
+            <th>Status</th>
+            <th>Symbol</th>
+            <th>Percentage Diff</th>
+            <th>Price</th>
+            <th>MA200</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+    etfData.forEach(data => {
+      tableHtml += `
+        <tr>
+          <td>${data.icon}</td>
+          <td>${data.symbol}</td>
+          <td>${data.percentageDiff}</td>
+          <td>$${data.price}</td>
+          <td>$${data.sma200}</td>
+        </tr>
+      `;
+    });
+    tableHtml += `
+        </tbody>
+      </table>
+    `;
 
-    return { success: true, tweetText };
+    return { success: true, tweetText: tableHtml };
   } catch (error) {
     console.error('Error fetching financial data in analyzeETFs:', error);
     return { success: false, message: 'Error fetching financial data: ' + error.message };
