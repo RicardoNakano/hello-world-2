@@ -1,3 +1,28 @@
+const admin = require('firebase-admin');
+require('dotenv').config();
+
+// Configurar o firebase-admin
+const adminConfig = {
+  credential: admin.credential.applicationDefault(),
+  projectId: process.env.APP_PROJECT_ID
+};
+
+admin.initializeApp(adminConfig);
+
+// Configurar o Auth Emulator no ambiente local
+if (process.env.FUNCTIONS_EMULATOR) {
+  process.env.FIREBASE_AUTH_EMULATOR_HOST = '127.0.0.1:9099';
+}
+
+// Importar e exportar as funções
+exports.helloWorld = require('./functions/helloWorld');
+exports.getFirebaseConfig = require('./functions/getFirebaseConfig');
+exports.postTweet = require('./functions/postTweet');
+exports.analyzeETFs = require('./functions/analyzeETFsExport');
+exports.generateLinkedInPost = require('./functions/generateLinkedInPost');
+exports.generateLinkedInPostImage = require('./functions/generateLinkedInPostImage');
+
+/*
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const { TwitterApi } = require('twitter-api-v2');
@@ -239,6 +264,17 @@ exports.postTweet = functions.https.onRequest(async (request, response) => {
 
     const tweetText = etfAnalysis.tweetText;
 
+    async function testAuth() {
+      try {
+        const user = await twitterClient.v2.me();
+        console.log('Autenticação bem-sucedida:', user.data);
+      } catch (error) {
+        console.error('Erro de autenticação:', error.message);
+      }
+    }
+
+    testAuth();
+
     // Postar no Twitter
     const tweet = await twitterClient.v2.tweet(tweetText);
 
@@ -339,7 +375,7 @@ exports.generateLinkedInPost = functions.https.onRequest(async (request, respons
         ]
       },
       model: 'grok-3-mini',
-      max_tokens: 1000,
+      max_tokens: 2000,
       temperature: 0.7
     };
 
@@ -472,3 +508,4 @@ exports.generateLinkedInPostImage = functions.https.onRequest(async (request, re
     });
   }
 });
+*/

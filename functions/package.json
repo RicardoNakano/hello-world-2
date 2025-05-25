@@ -17,6 +17,9 @@
     "dotenv": "^16.5.0",
     "firebase-admin": "^12.6.0",
     "firebase-functions": "^6.0.1",
+    "got": "^14.4.7",
+    "oauth-1.0a": "^2.2.6",
+    "querystring": "^0.2.1",
     "twitter-api-v2": "^1.23.2",
     "yahoo-finance2": "^2.13.3"
   },
