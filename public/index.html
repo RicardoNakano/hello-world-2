@@ -58,10 +58,13 @@
     <label for="linkedin-message">Post gerado (edite se desejar):</label>
     <textarea id="linkedin-message" readonly></textarea>
     <button id="clear-asterisks-button" onclick="clearAsterisks()" style="margin-top: 10px;">Limpar Asteriscos</button>
+    <button id="publish-linkedin-button" onclick="publishLinkedInPost()" style="margin-top: 10px; display: none;">Publicar no LinkedIn</button>
+    <span id="publish-linkedin-spinner" class="spinner"></span>
     <button id="linkedin-image-button" onclick="generateLinkedInPostImage()" style="display: none;">Gerar Imagem para o Post</button>
     <span id="linkedin-image-spinner" class="spinner"></span>
     <p id="linkedin-image-message"></p>
     <img id="linkedin-image-preview" style="display: none;" alt="Imagem gerada pro post do LinkedIn">
+    <p id="publish-linkedin-message"></p>
   </div>
   <p id="mensagem"></p>
 
@@ -149,6 +152,8 @@
               document.getElementById('linkedin-image-message').innerText = '';
               document.getElementById('linkedin-image-preview').style.display = 'none';
               document.getElementById('linkedin-image-button').style.display = 'none';
+              document.getElementById('publish-linkedin-button').style.display = 'none';
+              document.getElementById('publish-linkedin-message').innerText = '';
               lastLinkedInPost = null;
             })
             .catch((error) => {
@@ -181,6 +186,8 @@
             document.getElementById('linkedin-image-message').innerText = '';
             document.getElementById('linkedin-image-preview').style.display = 'none';
             document.getElementById('linkedin-image-button').style.display = 'none';
+            document.getElementById('publish-linkedin-button').style.display = 'none';
+            document.getElementById('publish-linkedin-message').innerText = '';
             lastLinkedInPost = null;
           }
         });
@@ -296,6 +303,7 @@
       const linkedinMessage = document.getElementById('linkedin-message');
       const linkedinImageButton = document.getElementById('linkedin-image-button');
       const linkedinImagePreview = document.getElementById('linkedin-image-preview');
+      const publishLinkedInButton = document.getElementById('publish-linkedin-button');
 
       linkedinButton.disabled = true;
       spinner.style.display = 'inline-block';
@@ -303,6 +311,7 @@
       linkedinMessage.readOnly = false; // Permitir edição
       linkedinImageButton.style.display = 'none';
       linkedinImagePreview.style.display = 'none';
+      publishLinkedInButton.style.display = 'none';
 
       try {
         const user = auth.currentUser;
@@ -345,11 +354,13 @@
       const linkedinImageMessage = document.getElementById('linkedin-image-message');
       const linkedinImagePreview = document.getElementById('linkedin-image-preview');
       const linkedinMessage = document.getElementById('linkedin-message');
+      const publishLinkedInButton = document.getElementById('publish-linkedin-button');
 
       linkedinImageButton.disabled = true;
       spinner.style.display = 'inline-block';
       linkedinImageMessage.innerText = '';
       linkedinImagePreview.style.display = 'none';
+      publishLinkedInButton.style.display = 'none';
 
       try {
         const user = auth.currentUser;
@@ -378,6 +389,7 @@
           linkedinImageMessage.innerText = `Imagem gerada com sucesso!\nPrompt usado:\n${result.prompt}`;
           linkedinImagePreview.src = result.imageUrl; // Exibir a imagem
           linkedinImagePreview.style.display = 'block';
+          publishLinkedInButton.style.display = 'block'; // Mostrar o botão pra publicar no LinkedIn
         } else {
           linkedinImageMessage.innerText = 'Erro: ' + result.message;
         }
@@ -399,11 +411,67 @@
       linkedinMessage.value = text;
     };
 
+    // Função pra publicar o post no LinkedIn
+    async function publishLinkedInPost() {
+      const publishLinkedInButton = document.getElementById('publish-linkedin-button');
+      const spinner = document.getElementById('publish-linkedin-spinner');
+      const publishLinkedInMessage = document.getElementById('publish-linkedin-message');
+      const linkedinMessage = document.getElementById('linkedin-message');
+      const linkedinImagePreview = document.getElementById('linkedin-image-preview');
+
+      publishLinkedInButton.disabled = true;
+      spinner.style.display = 'inline-block';
+      publishLinkedInMessage.innerText = '';
+
+      try {
+        const user = auth.currentUser;
+        if (!user) {
+          throw new Error('Usuário não autenticado.');
+        }
+
+        // Usar o texto editado do textarea
+        const postContent = linkedinMessage.value.trim();
+        if (!postContent) {
+          throw new Error('Nenhum post do LinkedIn disponível. Gere ou edite um post primeiro.');
+        }
+
+        // Usar a URL da imagem gerada
+        const imageUrl = linkedinImagePreview.src;
+        if (!imageUrl) {
+          throw new Error('Nenhuma imagem disponível. Gere uma imagem primeiro.');
+        }
+
+        console.log('Sending postContent and imageUrl to publishLinkedInPost:', postContent, imageUrl);
+
+        const response = await fetch(`${baseUrl}/publishLinkedInPost`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ postContent, imageUrl })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          publishLinkedInMessage.innerText = `Post publicado com sucesso no LinkedIn! ID: ${result.postId}`;
+        } else {
+          publishLinkedInMessage.innerText = 'Erro: ' + result.message;
+        }
+      } catch (error) {
+        console.error('Erro ao publicar no LinkedIn:', error);
+        publishLinkedInMessage.innerText = 'Erro ao publicar no LinkedIn: ' + error.message;
+      } finally {
+        publishLinkedInButton.disabled = false;
+        spinner.style.display = 'none';
+      }
+    }
+
     // Expor as funções no escopo global pra os onclicks
     window.postTweet = postTweet;
     window.analyzeETFs = analyzeETFs;
     window.generateLinkedInPost = generateLinkedInPost;
     window.generateLinkedInPostImage = generateLinkedInPostImage;
+    window.publishLinkedInPost = publishLinkedInPost;
   </script>
 </body>
 </html>

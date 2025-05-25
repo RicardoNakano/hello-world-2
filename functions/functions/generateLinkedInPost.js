@@ -28,7 +28,7 @@ const generateLinkedInPost = functions.https.onRequest(async (request, response)
     const endDateStr = endDate.toISOString().split('T')[0]; // Ex.: 2025-05-24
 
     // Configurar a query pro DeepSearch
-    const query = "Based on viral LinkedIn posts in English from the last 5 days, write a new viral post in English following the most effective structure, without any additional explanations. The post must have around 1200 caracters and include emojis, line breaks, bullets, actionable tips, and a call to action. Do not use double asterisks (**) for bold formatting.";
+    const query = "Based on viral LinkedIn posts in English from the last 5 days related to IT, AI, improve people performance, a funny sittuation or a very emotional situation, write a new viral post in English following the most effective structure, without any additional explanations. The post must have around 1200 caracters and include emojis, line breaks, bullets, actionable tips, and a call to action. Do not use double asterisks (**) for bold formatting. relate it to the last US news that whent viral in the last 5 days.";
 
     const url = 'https://api.x.ai/v1/chat/completions';
     const headers = {

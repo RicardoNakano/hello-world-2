@@ -21,6 +21,7 @@ exports.postTweet = require('./functions/postTweet');
 exports.analyzeETFs = require('./functions/analyzeETFsExport');
 exports.generateLinkedInPost = require('./functions/generateLinkedInPost');
 exports.generateLinkedInPostImage = require('./functions/generateLinkedInPostImage');
+exports.publishLinkedInPost = require('./functions/publishLinkedInPost');
 
 /*
 const functions = require('firebase-functions');
