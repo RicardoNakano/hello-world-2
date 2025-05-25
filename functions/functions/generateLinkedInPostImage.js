@@ -47,7 +47,7 @@ const generateLinkedInPostImage = functions.https.onRequest(async (request, resp
           content: summaryQuery
         }
       ],
-      model: 'grok-3', // Usar o mesmo modelo que gerou o post
+      model: 'grok-3-mini', // Usar o mesmo modelo que gerou o post
       max_tokens: 1024, // Reduzir pra garantir resposta curta
       temperature: 0.7 // Reduzir criatividade pra evitar respostas inesperadas
     };
