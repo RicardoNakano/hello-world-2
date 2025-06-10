@@ -17,13 +17,13 @@ const industryPERatios = {
   'Transmissão': 22.50
 };
 
-// Mapeamento de indústrias BESST para Finnhub
+// Mapeamento de indústrias BESST para Finnhub (termos mais genéricos)
 const industryMapping = {
-  'Bancos': ['Banks—Regional', 'Banks—Diversified'],
-  'Elétricas': ['Utilities—Regulated Electric'],
-  'Saneamento': ['Utilities—Regulated Water'],
-  'Seguros': ['Insurance—Property & Casualty', 'Insurance—Life'],
-  'Transmissão': ['Utilities—Regulated Electric']
+  'Bancos': ['Bank'],
+  'Elétricas': ['Utilities', 'Electric'],
+  'Saneamento': ['Utilities', 'Water'],
+  'Seguros': ['Insurance'],
+  'Transmissão': ['Utilities', 'Electric']
 };
 
 const analyzeStocksByPERatio = functions.https.onRequest(async (request, response) => {
@@ -49,16 +49,31 @@ const analyzeStocksByPERatio = functions.https.onRequest(async (request, respons
 
     const db = admin.firestore();
     const cacheDoc = await db.collection('stock_cache').doc('us_stocks_besst').get();
-    let companies = cacheDoc.exists ? cacheDoc.data().companies : null;
+    let companies = null;
+    const cacheTTL = 24 * 60 * 60 * 1000; // Cache válido por 24 horas
 
-    // Buscar lista de ações se não estiver em cache
+    // Verificar se o cache é recente
+    if (cacheDoc.exists && cacheDoc.data().timestamp) {
+      const cacheTimestamp = cacheDoc.data().timestamp.toMillis();
+      const currentTime = Date.now();
+      if (currentTime - cacheTimestamp < cacheTTL) {
+        companies = cacheDoc.data().companies;
+        console.log(`Usando cache com ${companies.length} empresas`);
+      }
+    }
+
+    // Buscar lista de ações se o cache não for válido
     if (!companies) {
+      console.log('Buscando nova lista de ações na Finnhub');
       const symbolUrl = `https://finnhub.io/api/v1/stock/symbol?exchange=US&token=${process.env.FINNHUB_API_KEY}`;
       const symbolResponse = await axios.get(symbolUrl);
       companies = symbolResponse.data.filter(company => {
-        const industry = company.finnhubIndustry || '';
-        return Object.values(industryMapping).flat().includes(industry);
-      });
+        const industry = (company.finnhubIndustry || '').toLowerCase();
+        const keywords = Object.values(industryMapping).flat().map(k => k.toLowerCase());
+        return keywords.some(keyword => industry.includes(keyword));
+      }).slice(0, 200); // Limitar a 200 empresas
+
+      console.log(`Encontradas ${companies.length} empresas após filtro`);
 
       await db.collection('stock_cache').doc('us_stocks_besst').set({
         companies,
@@ -69,17 +84,20 @@ const analyzeStocksByPERatio = functions.https.onRequest(async (request, respons
     const results = {};
     for (const category in industryMapping) {
       results[category] = [];
-      const finnhubIndustries = industryMapping[category];
+      const keywords = industryMapping[category].map(k => k.toLowerCase());
       const industryPERatio = industryPERatios[category] || 0;
 
       // Filtrar empresas por indústria
       let filteredCompanies = companies.filter(company => {
-        const industry = company.finnhubIndustry || '';
+        const industry = (company.finnhubIndustry || '').toLowerCase();
+        const description = (company.description || '').toLowerCase();
         if (category === 'Transmissão') {
-          return finnhubIndustries.includes(industry) && company.description?.toLowerCase().includes('transmission');
+          return keywords.some(keyword => industry.includes(keyword)) && description.includes('transmission');
         }
-        return finnhubIndustries.includes(industry);
+        return keywords.some(keyword => industry.includes(keyword));
       });
+
+      console.log(`Categoria ${category}: ${filteredCompanies.length} empresas filtradas`);
 
       // Obter market cap para ordenar
       const companiesWithMarketCap = [];
@@ -99,13 +117,17 @@ const analyzeStocksByPERatio = functions.https.onRequest(async (request, respons
 
         const batchResults = await Promise.all(promises);
         companiesWithMarketCap.push(...batchResults.filter(result => result && result.marketCap > 0));
-        await new Promise(resolve => setTimeout(resolve, 2000)); // Pausa de 2 segundos
+        await new Promise(resolve => setTimeout(resolve, 2000));
       }
+
+      console.log(`Categoria ${category}: ${companiesWithMarketCap.length} empresas com market cap`);
 
       // Ordenar por market cap e pegar as 5 maiores
       const topCompanies = companiesWithMarketCap
         .sort((a, b) => b.marketCap - a.marketCap)
         .slice(0, 5);
+
+      console.log(`Categoria ${category}: ${topCompanies.length} empresas selecionadas`);
 
       // Obter preço e P/E para as top 5
       for (const company of topCompanies) {
@@ -133,13 +155,17 @@ const analyzeStocksByPERatio = functions.https.onRequest(async (request, respons
             industryPERatio: industryPERatio.toFixed(2),
             signal
           });
+
+          console.log(`Adicionada empresa ${company.symbol} em ${category}`);
         } catch (error) {
-          console.warn(`Erro ao processar ${company.symbol}: ${error.message}`);
+          console.warn(`Erro ao processar ${company.symbol} em ${category}: ${error.message}`);
         }
 
-        await new Promise(resolve => setTimeout(resolve, 2000)); // Pausa de 2 segundos
+        await new Promise(resolve => setTimeout(resolve, 2000));
       }
     }
+
+    console.log('Resultados finais:', JSON.stringify(results, null, 2));
 
     response.status(200).send({
       success: true,
@@ -147,7 +173,7 @@ const analyzeStocksByPERatio = functions.https.onRequest(async (request, respons
       data: results
     });
   } catch (error) {
-    console.error('Error analyzing stocks:', error);
+    console.error('Erro geral:', error);
     response.status(500).send({
       success: false,
       message: 'Error analyzing stocks: ' + (error.response?.data?.message || error.message)
