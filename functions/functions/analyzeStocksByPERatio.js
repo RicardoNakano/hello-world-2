@@ -15,27 +15,39 @@ const industryPERatios = {
 const sampleCompanies = {
   'Bancos': [
     { name: 'JPMorgan Chase & Co.', ticker: 'JPM' },
+    { name: 'Bank of America Corporation', ticker: 'BAC' },
     { name: 'Wells Fargo & Company', ticker: 'WFC' },
-    { name: 'Bank of America Corporation', ticker: 'BAC' }
+    { name: 'Citigroup', ticker: 'C' },
+    { name: 'Goldman Sachs', ticker: 'GS' }
+
   ],
   'Elétricas': [
     { name: 'NextEra Energy, Inc.', ticker: 'NEE' },
-    { name: 'Dominion Energy, Inc.', ticker: 'D' },
-    { name: 'Southern Company', ticker: 'SO' }
+    { name: 'The Southern Company.', ticker: 'SO' },
+    { name: 'Duke Energy Corporation', ticker: 'DUK' },
+    { name: 'American Electric Power Company, Inc.', ticker: 'AEP' },
+    { name: 'Exelon Corporation', ticker: 'EXC' }
   ],
   'Saneamento': [
     { name: 'American Water Works Company, Inc.', ticker: 'AWK' },
-    { name: 'Essential Utilities, Inc.', ticker: 'WTRG' }
+    { name: 'Essential Utilities, Inc.', ticker: 'WTRG' },
+    { name: 'American States Water Company.', ticker: 'AWR' },
+    { name: 'California Water Service Group.', ticker: 'CWT' },
+    { name: 'SJW Group.', ticker: 'SJW' }
   ],
   'Seguros': [
-    { name: 'MetLife, Inc.', ticker: 'MET' },
-    { name: 'Allstate Corporation', ticker: 'ALL' },
-    { name: 'Prudential Financial, Inc.', ticker: 'PRU' }
+    { name: 'Progressive Corporation.', ticker: 'PGR' },
+    { name: 'Chubb Limited', ticker: 'CB' },
+    { name: 'The Travelers Companies, Inc.', ticker: 'TRV' },
+    { name: 'Allstate Corporation.', ticker: 'ALL' },
+    { name: 'American International Group, Inc.', ticker: 'AIG' }
   ],
   'Transmissão': [
-    { name: 'FirstEnergy Corp.', ticker: 'FE' },
-    { name: 'CenterPoint Energy, Inc.', ticker: 'CNP' },
-    { name: 'American Electric Power Company, Inc.', ticker: 'AEP' }
+    { name: 'NextEra Energy, Inc..', ticker: 'NEE' },
+    { name: 'The Southern Company.', ticker: 'SO' },
+    { name: 'Duke Energy Corporation.', ticker: 'DUK' },
+    { name: 'American Electric Power Company, Inc.', ticker: 'AEP' },
+    { name: 'Exelon Corporation.', ticker: 'EXC' }
   ]
 };
 
