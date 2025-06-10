@@ -1,6 +1,6 @@
 // Importar Firebase SDK
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, connectAuthEmulator } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 
 // Determinar a URL base dependendo do ambiente
 const isEmulator = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
@@ -18,14 +18,16 @@ let app, auth;
 window.signInWithGoogle = function() {
   if (!auth) {
     console.error('Firebase Auth não inicializado ainda.');
-    document.getElementById('user-info').innerText = 'Por favor, aguarde a inicialização do Firebase.';
+    const userInfo = document.getElementById('user-info');
+    if (userInfo) userInfo.innerText = 'Por favor, aguarde a inicialização do Firebase.';
     return;
   }
   const provider = new GoogleAuthProvider();
   signInWithPopup(auth, provider)
     .then((result) => {
       const user = result.user;
-      document.getElementById('user-info').innerText = `Bem-vindo, ${user.displayName}!`;
+      const userInfo = document.getElementById('user-info');
+      if (userInfo) userInfo.innerText = `Bem-vindo, ${user.displayName}!`;
       document.getElementById('sign-in-button').style.display = 'none';
       document.getElementById('sign-out-button').style.display = 'block';
       document.getElementById('tweet-section').style.display = 'block';
@@ -35,7 +37,8 @@ window.signInWithGoogle = function() {
     })
     .catch((error) => {
       console.error('Erro ao fazer login:', error);
-      document.getElementById('user-info').innerText = 'Erro ao fazer login: ' + error.message;
+      const userInfo = document.getElementById('user-info');
+      if (userInfo) userInfo.innerText = 'Erro ao fazer login: ' + error.message;
     });
 };
 
@@ -43,32 +46,42 @@ window.signInWithGoogle = function() {
 window.signOut = function() {
   if (!auth) {
     console.error('Firebase Auth não inicializado ainda.');
-    document.getElementById('user-info').innerText = 'Por favor, aguarde a inicialização do Firebase.';
+    const userInfo = document.getElementById('user-info');
+    if (userInfo) userInfo.innerText = 'Por favor, aguarde a inicialização do Firebase.';
     return;
   }
   signOut(auth)
     .then(() => {
-      document.getElementById('user-info').innerText = 'Você saiu.';
+      const userInfo = document.getElementById('user-info');
+      if (userInfo) userInfo.innerText = 'Você saiu.';
       document.getElementById('sign-in-button').style.display = 'block';
       document.getElementById('sign-out-button').style.display = 'none';
       document.getElementById('tweet-section').style.display = 'none';
       document.getElementById('etf-section').style.display = 'none';
       document.getElementById('linkedin-section').style.display = 'none';
-      document.getElementById('mensagem').innerText = '';
-      document.getElementById('tweet-message').innerText = '';
-      document.getElementById('etf-message').innerHTML = '';
-      document.getElementById('linkedin-message').value = '';
-      document.getElementById('article-title').value = '';
-      document.getElementById('linkedin-image-message').innerText = '';
+      const mensagem = document.getElementById('mensagem');
+      if (mensagem) mensagem.innerText = '';
+      const tweetMessage = document.getElementById('tweet-message');
+      if (tweetMessage) tweetMessage.innerText = '';
+      const etfMessage = document.getElementById('etf-message');
+      if (etfMessage) etfMessage.innerHTML = '';
+      const linkedinMessage = document.getElementById('linkedin-message');
+      if (linkedinMessage) linkedinMessage.value = '';
+      const articleTitle = document.getElementById('article-title');
+      if (articleTitle) articleTitle.value = '';
+      const linkedinImageMessage = document.getElementById('linkedin-image-message');
+      if (linkedinImageMessage) linkedinImageMessage.innerText = '';
       document.getElementById('linkedin-image-preview').style.display = 'none';
       document.getElementById('linkedin-image-button').style.display = 'none';
       document.getElementById('publish-linkedin-button').style.display = 'none';
-      document.getElementById('publish-linkedin-message').innerText = '';
+      const publishLinkedInMessage = document.getElementById('publish-linkedin-message');
+      if (publishLinkedInMessage) publishLinkedInMessage.innerText = '';
       lastLinkedInContent = null;
     })
     .catch((error) => {
       console.error('Erro ao sair:', error);
-      document.getElementById('user-info').innerText = 'Erro ao sair: ' + error.message;
+      const userInfo = document.getElementById('user-info');
+      if (userInfo) userInfo.innerText = 'Erro ao sair: ' + error.message;
     });
 };
 
@@ -87,69 +100,79 @@ async function fetchFirebaseConfig() {
     return await response.json();
   } catch (error) {
     console.error('Erro ao buscar firebaseConfig:', error);
-    document.getElementById('user-info').innerText = 'Erro ao carregar configuração do Firebase: ' + error.message;
+    const userInfo = document.getElementById('user-info');
+    if (userInfo) userInfo.innerText = 'Erro ao carregar configuração do Firebase: ' + error.message;
     throw error;
   }
 }
 
 // Inicializar Firebase com configuração dinâmica
-fetchFirebaseConfig()
-  .then((firebaseConfig) => {
-    app = initializeApp(firebaseConfig);
-    auth = getAuth(app);
-
-    // Configurar o Auth Emulator no ambiente local
-    if (isEmulator) {
-      connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
-    }
-
-    // Monitorar estado de autenticação
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        document.getElementById('user-info').innerText = `Bem-vindo, ${user.displayName}!`;
-        document.getElementById('sign-in-button').style.display = 'none';
-        document.getElementById('sign-out-button').style.display = 'block';
-        document.getElementById('tweet-section').style.display = 'block';
-        document.getElementById('etf-section').style.display = 'block';
-        document.getElementById('linkedin-section').style.display = 'block';
-        fetchCloudFunction();
-      } else {
-        document.getElementById('user-info').innerText = 'Nenhum usuário logado.';
-        document.getElementById('sign-in-button').style.display = 'block';
-        document.getElementById('sign-out-button').style.display = 'none';
-        document.getElementById('tweet-section').style.display = 'none';
-        document.getElementById('etf-section').style.display = 'none';
-        document.getElementById('linkedin-section').style.display = 'none';
-        document.getElementById('mensagem').innerText = '';
-        document.getElementById('tweet-message').innerText = '';
-        document.getElementById('etf-message').innerHTML = '';
-        document.getElementById('linkedin-message').value = '';
-        document.getElementById('article-title').value = '';
-        document.getElementById('linkedin-image-message').innerText = '';
-        document.getElementById('linkedin-image-preview').style.display = 'none';
-        document.getElementById('linkedin-image-button').style.display = 'none';
-        document.getElementById('publish-linkedin-button').style.display = 'none';
-        document.getElementById('publish-linkedin-message').innerText = '';
-        lastLinkedInContent = null;
-      }
-    });
-  })
-  .catch((error) => {
-    console.error('Falha na inicialização do Firebase:', error);
-  });
-
-// Inicializar MDC Ripple nos botões
 document.addEventListener('DOMContentLoaded', () => {
-  document.querySelectorAll('.mdc-button').forEach(button => {
-    new mdc.ripple.MDCRipple(button);
-  });
+  fetchFirebaseConfig()
+    .then((firebaseConfig) => {
+      app = initializeApp(firebaseConfig);
+      auth = getAuth(app);
+
+      // Monitorar estado de autenticação
+      onAuthStateChanged(auth, (user) => {
+        const userInfo = document.getElementById('user-info');
+        if (user) {
+          if (userInfo) userInfo.innerText = `Bem-vindo, ${user.displayName}!`;
+          document.getElementById('sign-in-button').style.display = 'none';
+          document.getElementById('sign-out-button').style.display = 'block';
+          document.getElementById('tweet-section').style.display = 'block';
+          document.getElementById('etf-section').style.display = 'block';
+          document.getElementById('linkedin-section').style.display = 'block';
+          fetchCloudFunction();
+        } else {
+          if (userInfo) userInfo.innerText = 'Nenhum usuário logado.';
+          document.getElementById('sign-in-button').style.display = 'block';
+          document.getElementById('sign-out-button').style.display = 'none';
+          document.getElementById('tweet-section').style.display = 'none';
+          document.getElementById('etf-section').style.display = 'none';
+          document.getElementById('linkedin-section').style.display = 'none';
+          const mensagem = document.getElementById('mensagem');
+          if (mensagem) mensagem.innerText = '';
+          const tweetMessage = document.getElementById('tweet-message');
+          if (tweetMessage) tweetMessage.innerText = '';
+          const etfMessage = document.getElementById('etf-message');
+          if (etfMessage) etfMessage.innerHTML = '';
+          const linkedinMessage = document.getElementById('linkedin-message');
+          if (linkedinMessage) linkedinMessage.value = '';
+          const articleTitle = document.getElementById('article-title');
+          if (articleTitle) articleTitle.value = '';
+          const linkedinImageMessage = document.getElementById('linkedin-image-message');
+          if (linkedinImageMessage) linkedinImageMessage.innerText = '';
+          document.getElementById('linkedin-image-preview').style.display = 'none';
+          document.getElementById('linkedin-image-button').style.display = 'none';
+          document.getElementById('publish-linkedin-button').style.display = 'none';
+          const publishLinkedInMessage = document.getElementById('publish-linkedin-message');
+          if (publishLinkedInMessage) publishLinkedInMessage.innerText = '';
+          lastLinkedInContent = null;
+        }
+      });
+    })
+    .catch((error) => {
+      console.error('Falha na inicialização do Firebase:', error);
+    });
+
+  // Inicializar MDC Ripple nos botões
+  if (typeof mdc !== 'undefined' && mdc.ripple) {
+    document.querySelectorAll('.mdc-button').forEach(button => {
+      new mdc.ripple.MDCRipple(button);
+    });
+  } else {
+    console.warn('MDC Ripple não disponível. Efeito de ripple não será aplicado.');
+  }
 
   // Listener para o seletor de tipo de conteúdo
   const contentTypeSelect = document.getElementById('content-type');
   const articleTitleSection = document.getElementById('article-title-section');
-  contentTypeSelect.addEventListener('change', () => {
-    articleTitleSection.style.display = contentTypeSelect.value === 'ARTICLE' ? 'block' : 'none';
-  });
+  if (contentTypeSelect && articleTitleSection) {
+    contentTypeSelect.addEventListener('change', () => {
+      articleTitleSection.style.display = contentTypeSelect.value === 'ARTICLE' ? 'block' : 'none';
+    });
+  }
 });
 
 // Chamar a Cloud Function helloWorld
@@ -164,13 +187,16 @@ async function fetchCloudFunction() {
         }
       });
       const data = await response.text();
-      document.getElementById('mensagem').innerText = data;
+      const mensagem = document.getElementById('mensagem');
+      if (mensagem) mensagem.innerText = data;
     } catch (error) {
       console.error('Erro:', error);
-      document.getElementById('mensagem').innerText = 'Erro ao chamar a função: ' + error.message;
+      const mensagem = document.getElementById('mensagem');
+      if (mensagem) mensagem.innerText = 'Erro ao chamar a função: ' + error.message;
     }
   } else {
-    document.getElementById('mensagem').innerText = 'Faça login para acessar a função.';
+    const mensagem = document.getElementById('mensagem');
+    if (mensagem) mensagem.innerText = 'Faça login para acessar a função.';
   }
 }
 
@@ -179,6 +205,8 @@ async function postTweet() {
   const tweetButton = document.getElementById('tweet-button');
   const spinner = document.getElementById('tweet-spinner');
   const tweetMessage = document.getElementById('tweet-message');
+
+  if (!tweetButton || !spinner || !tweetMessage) return;
 
   tweetButton.disabled = true;
   spinner.style.display = 'inline-block';
@@ -218,6 +246,8 @@ async function analyzeETFs() {
   const etfButton = document.getElementById('etf-button');
   const spinner = document.getElementById('etf-spinner');
   const etfMessage = document.getElementById('etf-message');
+
+  if (!etfButton || !spinner || !etfMessage) return;
 
   etfButton.disabled = true;
   spinner.style.display = 'inline-block';
@@ -261,7 +291,9 @@ async function generateLinkedInPost() {
   const linkedinImageButton = document.getElementById('linkedin-image-button');
   const linkedinImagePreview = document.getElementById('linkedin-image-preview');
   const publishLinkedInButton = document.getElementById('publish-linkedin-button');
-  const contentType = document.getElementById('content-type').value;
+  const contentTypeSelect = document.getElementById('content-type');
+
+  if (!linkedinButton || !spinner || !linkedinMessage || !articleTitleInput || !linkedinImageButton || !linkedinImagePreview || !publishLinkedInButton || !contentTypeSelect) return;
 
   linkedinButton.disabled = true;
   spinner.style.display = 'inline-block';
@@ -277,6 +309,8 @@ async function generateLinkedInPost() {
     if (!user) {
       throw new Error('Usuário não autenticado.');
     }
+
+    const contentType = contentTypeSelect.value;
 
     const response = await fetch(`${baseUrl}/generateLinkedInPost`, {
       method: 'POST',
@@ -317,6 +351,8 @@ async function generateLinkedInPostImage() {
   const linkedinImagePreview = document.getElementById('linkedin-image-preview');
   const linkedinMessage = document.getElementById('linkedin-message');
   const publishLinkedInButton = document.getElementById('publish-linkedin-button');
+
+  if (!linkedinImageButton || !spinner || !linkedinImageMessage || !linkedinImagePreview || !linkedinMessage || !publishLinkedInButton) return;
 
   linkedinImageButton.disabled = true;
   spinner.style.display = 'inline-block';
@@ -367,10 +403,12 @@ async function generateLinkedInPostImage() {
 // Função pra limpar asteriscos duplos (**)
 window.clearAsterisks = function() {
   const linkedinMessage = document.getElementById('linkedin-message');
-  let text = linkedinMessage.value;
-  // Remove todos os pares de **, mantendo o texto entre eles
-  text = text.replace(/\*\*(.*?)\*\*/g, '$1');
-  linkedinMessage.value = text;
+  if (linkedinMessage) {
+    let text = linkedinMessage.value;
+    // Remove todos os pares de **, mantendo o texto entre eles
+    text = text.replace(/\*\*(.*?)\*\*/g, '$1');
+    linkedinMessage.value = text;
+  }
 };
 
 // Função pra publicar o post ou artigo no LinkedIn
@@ -380,8 +418,10 @@ async function publishLinkedInPost() {
   const publishLinkedInMessage = document.getElementById('publish-linkedin-message');
   const linkedinMessage = document.getElementById('linkedin-message');
   const linkedinImagePreview = document.getElementById('linkedin-image-preview');
-  const contentType = document.getElementById('content-type').value;
-  const articleTitle = document.getElementById('article-title').value.trim();
+  const contentTypeSelect = document.getElementById('content-type');
+  const articleTitleInput = document.getElementById('article-title');
+
+  if (!publishLinkedInButton || !spinner || !publishLinkedInMessage || !linkedinMessage || !linkedinImagePreview || !contentTypeSelect || !articleTitleInput) return;
 
   publishLinkedInButton.disabled = true;
   spinner.style.display = 'inline-block';
@@ -406,6 +446,8 @@ async function publishLinkedInPost() {
     }
 
     // Validar título para artigos
+    const contentType = contentTypeSelect.value;
+    const articleTitle = articleTitleInput.value.trim();
     if (contentType === 'ARTICLE' && !articleTitle) {
       throw new Error('Título do artigo é obrigatório.');
     }
