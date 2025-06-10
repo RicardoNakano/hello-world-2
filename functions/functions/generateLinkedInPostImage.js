@@ -65,7 +65,7 @@ const generateLinkedInPostImage = functions.https.onRequest(async (request, resp
       console.warn('Image prompt generation failed, using fallback prompt');
       // Fallback: Criar um prompt genérico baseado no postContent
       const firstLine = postContent.split('\n')[0].replace(/[^a-zA-Z\s]/g, '').trim(); // Pegar a primeira linha, remover emojis e caracteres especiais
-      const fallbackPrompt = `A Nordic woman with a slight smile shares a LinkedIn post at her desk.`;
+      const fallbackPrompt = `A very beautiful, sexy, but professional, Nordic woman with a slight smile shares a LinkedIn post at her desk.`;
       imagePrompt = firstLine.length > 50
         ? fallbackPrompt
         : `A Nordic woman with a slight smile shares: ${firstLine}`;

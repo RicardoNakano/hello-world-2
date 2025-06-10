@@ -8,8 +8,8 @@ const baseUrl = isEmulator
   ? 'http://127.0.0.1:5001/hello-world-firebase-f1b5d/us-central1'
   : 'https://us-central1-hello-world-firebase-f1b5d.cloudfunctions.net';
 
-// Variável global pra armazenar o último post gerado
-let lastLinkedInPost = null;
+// Variável global pra armazenar o último post/artigo gerado
+let lastLinkedInContent = null;
 
 // Variáveis globais pra Firebase
 let app, auth;
@@ -58,12 +58,13 @@ window.signOut = function() {
       document.getElementById('tweet-message').innerText = '';
       document.getElementById('etf-message').innerHTML = '';
       document.getElementById('linkedin-message').value = '';
+      document.getElementById('article-title').value = '';
       document.getElementById('linkedin-image-message').innerText = '';
       document.getElementById('linkedin-image-preview').style.display = 'none';
       document.getElementById('linkedin-image-button').style.display = 'none';
       document.getElementById('publish-linkedin-button').style.display = 'none';
       document.getElementById('publish-linkedin-message').innerText = '';
-      lastLinkedInPost = null;
+      lastLinkedInContent = null;
     })
     .catch((error) => {
       console.error('Erro ao sair:', error);
@@ -123,12 +124,13 @@ fetchFirebaseConfig()
         document.getElementById('tweet-message').innerText = '';
         document.getElementById('etf-message').innerHTML = '';
         document.getElementById('linkedin-message').value = '';
+        document.getElementById('article-title').value = '';
         document.getElementById('linkedin-image-message').innerText = '';
         document.getElementById('linkedin-image-preview').style.display = 'none';
         document.getElementById('linkedin-image-button').style.display = 'none';
         document.getElementById('publish-linkedin-button').style.display = 'none';
         document.getElementById('publish-linkedin-message').innerText = '';
-        lastLinkedInPost = null;
+        lastLinkedInContent = null;
       }
     });
   })
@@ -140,6 +142,13 @@ fetchFirebaseConfig()
 document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.mdc-button').forEach(button => {
     new mdc.ripple.MDCRipple(button);
+  });
+
+  // Listener para o seletor de tipo de conteúdo
+  const contentTypeSelect = document.getElementById('content-type');
+  const articleTitleSection = document.getElementById('article-title-section');
+  contentTypeSelect.addEventListener('change', () => {
+    articleTitleSection.style.display = contentTypeSelect.value === 'ARTICLE' ? 'block' : 'none';
   });
 });
 
@@ -243,18 +252,21 @@ async function analyzeETFs() {
   }
 }
 
-// Função pra gerar post no LinkedIn
+// Função pra gerar post ou artigo no LinkedIn
 async function generateLinkedInPost() {
   const linkedinButton = document.getElementById('linkedin-button');
   const spinner = document.getElementById('linkedin-spinner');
   const linkedinMessage = document.getElementById('linkedin-message');
+  const articleTitleInput = document.getElementById('article-title');
   const linkedinImageButton = document.getElementById('linkedin-image-button');
   const linkedinImagePreview = document.getElementById('linkedin-image-preview');
   const publishLinkedInButton = document.getElementById('publish-linkedin-button');
+  const contentType = document.getElementById('content-type').value;
 
   linkedinButton.disabled = true;
   spinner.style.display = 'inline-block';
   linkedinMessage.value = '';
+  articleTitleInput.value = '';
   linkedinMessage.readOnly = false; // Permitir edição
   linkedinImageButton.style.display = 'none';
   linkedinImagePreview.style.display = 'none';
@@ -271,22 +283,25 @@ async function generateLinkedInPost() {
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({})
+      body: JSON.stringify({ contentType })
     });
 
     const result = await response.json();
     if (result.success) {
-      lastLinkedInPost = result.postContent; // Salvar o post gerado
-      console.log('Generated LinkedIn post:', lastLinkedInPost); // Log pra verificar o post gerado
-      linkedinMessage.value = result.postContent; // Exibir no textarea
-      linkedinImageButton.style.display = 'block'; // Mostrar o botão pra gerar a imagem
+      lastLinkedInContent = { content: result.postContent, type: contentType, articleTitle: result.articleTitle || null };
+      console.log('Generated LinkedIn content:', lastLinkedInContent);
+      linkedinMessage.value = result.postContent;
+      if (contentType === 'ARTICLE' && result.articleTitle) {
+        articleTitleInput.value = result.articleTitle;
+      }
+      linkedinImageButton.style.display = 'block';
     } else {
       linkedinMessage.value = 'Erro: ' + result.message;
       linkedinMessage.readOnly = true;
     }
   } catch (error) {
-    console.error('Erro ao gerar post no LinkedIn:', error);
-    linkedinMessage.value = 'Erro ao gerar post no LinkedIn: ' + error.message;
+    console.error('Erro ao gerar conteúdo no LinkedIn:', error);
+    linkedinMessage.value = 'Erro ao gerar conteúdo no LinkedIn: ' + error.message;
     linkedinMessage.readOnly = true;
   } finally {
     linkedinButton.disabled = false;
@@ -294,7 +309,7 @@ async function generateLinkedInPost() {
   }
 }
 
-// Função pra gerar a imagem pro post do LinkedIn
+// Função pra gerar a imagem pro post ou artigo do LinkedIn
 async function generateLinkedInPostImage() {
   const linkedinImageButton = document.getElementById('linkedin-image-button');
   const spinner = document.getElementById('linkedin-image-spinner');
@@ -318,10 +333,10 @@ async function generateLinkedInPostImage() {
     // Usar o texto editado do textarea
     const editedPostContent = linkedinMessage.value.trim();
     if (!editedPostContent) {
-      throw new Error('Nenhum post do LinkedIn disponível. Gere ou edite um post primeiro.');
+      throw new Error('Nenhum conteúdo do LinkedIn disponível. Gere ou edite um conteúdo primeiro.');
     }
 
-    console.log('Sending postContent to generateLinkedInPostImage:', editedPostContent); // Log pra verificar o envio
+    console.log('Sending postContent to generateLinkedInPostImage:', editedPostContent);
 
     const response = await fetch(`${baseUrl}/generateLinkedInPostImage`, {
       method: 'POST',
@@ -334,9 +349,9 @@ async function generateLinkedInPostImage() {
     const result = await response.json();
     if (result.success) {
       linkedinImageMessage.innerText = `Imagem gerada com sucesso!\nPrompt usado:\n${result.prompt}`;
-      linkedinImagePreview.src = result.imageUrl; // Exibir a imagem
+      linkedinImagePreview.src = result.imageUrl;
       linkedinImagePreview.style.display = 'block';
-      publishLinkedInButton.style.display = 'block'; // Mostrar o botão pra publicar no LinkedIn
+      publishLinkedInButton.style.display = 'block';
     } else {
       linkedinImageMessage.innerText = 'Erro: ' + result.message;
     }
@@ -358,13 +373,15 @@ window.clearAsterisks = function() {
   linkedinMessage.value = text;
 };
 
-// Função pra publicar o post no LinkedIn
+// Função pra publicar o post ou artigo no LinkedIn
 async function publishLinkedInPost() {
   const publishLinkedInButton = document.getElementById('publish-linkedin-button');
   const spinner = document.getElementById('publish-linkedin-spinner');
   const publishLinkedInMessage = document.getElementById('publish-linkedin-message');
   const linkedinMessage = document.getElementById('linkedin-message');
   const linkedinImagePreview = document.getElementById('linkedin-image-preview');
+  const contentType = document.getElementById('content-type').value;
+  const articleTitle = document.getElementById('article-title').value.trim();
 
   publishLinkedInButton.disabled = true;
   spinner.style.display = 'inline-block';
@@ -379,7 +396,7 @@ async function publishLinkedInPost() {
     // Usar o texto editado do textarea
     const postContent = linkedinMessage.value.trim();
     if (!postContent) {
-      throw new Error('Nenhum post do LinkedIn disponível. Gere ou edite um post primeiro.');
+      throw new Error('Nenhum conteúdo do LinkedIn disponível. Gere ou edite um conteúdo primeiro.');
     }
 
     // Usar a URL da imagem gerada
@@ -388,19 +405,24 @@ async function publishLinkedInPost() {
       throw new Error('Nenhuma imagem disponível. Gere uma imagem primeiro.');
     }
 
-    console.log('Sending postContent and imageUrl to publishLinkedInPost:', postContent, imageUrl);
+    // Validar título para artigos
+    if (contentType === 'ARTICLE' && !articleTitle) {
+      throw new Error('Título do artigo é obrigatório.');
+    }
+
+    console.log('Sending postContent, imageUrl, contentType, and articleTitle to publishLinkedInPost:', postContent, imageUrl, contentType, articleTitle);
 
     const response = await fetch(`${baseUrl}/publishLinkedInPost`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ postContent, imageUrl })
+      body: JSON.stringify({ postContent, imageUrl, contentType, articleTitle })
     });
 
     const result = await response.json();
     if (result.success) {
-      publishLinkedInMessage.innerText = `Post publicado com sucesso no LinkedIn! ID: ${result.postId}`;
+      publishLinkedInMessage.innerText = `Conteúdo publicado com sucesso no LinkedIn! ID: ${result.postId}`;
     } else {
       publishLinkedInMessage.innerText = 'Erro: ' + result.message;
     }

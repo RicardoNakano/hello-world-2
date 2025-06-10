@@ -3,64 +3,74 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hello World com Google Auth</title>
-  <!-- Material Design Components (MDC) CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.css">
-  <!-- Material Icons -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
-  <!-- MDC JS tradicional -->
-  <script src="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.js"></script>
-  <!-- Arquivos locais -->
-  <link rel="stylesheet" href="/styles.css">
-  <script type="module" src="/script.js"></script>
+  <title>Meu Site</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/@material/mdc-typography@13.0.0/dist/mdc-typography.min.css">
+  <link rel="stylesheet" href="https://unpkg.com/@material/mdc-button@13.0.0/dist/mdc-button.min.css">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <h1>Meu Site</h1>
-  <div id="auth-section" class="mdc-card">
+  <div id="auth-section">
+    <p id="user-info">Nenhum usuário logado.</p>
     <button id="sign-in-button" class="mdc-button mdc-button--raised" onclick="signInWithGoogle()">
-      <span class="mdc-button__label">Entrar com Google</span>
+      Entrar com Google
     </button>
-    <button id="sign-out-button" class="mdc-button mdc-button--outlined" onclick="signOut()" style="display: none;">
-      <span class="mdc-button__label">Sair</span>
+    <button id="sign-out-button" class="mdc-button mdc-button--raised" onclick="signOut()" style="display: none;">
+      Sair
     </button>
-    <p id="user-info"></p>
   </div>
-  <div id="tweet-section" class="mdc-card" style="display: none;">
+
+  <div id="tweet-section" style="display: none;">
+    <h2>Postar no Twitter</h2>
     <button id="tweet-button" class="mdc-button mdc-button--raised" onclick="postTweet()">
-      <span class="mdc-button__label">Postar no Twitter</span>
+      Postar Tweet
+      <span id="tweet-spinner" class="spinner"></span>
     </button>
-    <span id="tweet-spinner" class="spinner"></span>
     <p id="tweet-message"></p>
   </div>
-  <div id="etf-section" class="mdc-card" style="display: none;">
+
+  <div id="etf-section" style="display: none;">
+    <h2>Analisar ETFs</h2>
     <button id="etf-button" class="mdc-button mdc-button--raised" onclick="analyzeETFs()">
-      <span class="mdc-button__label">Analisar ETFs</span>
+      Analisar ETFs
+      <span id="etf-spinner" class="spinner"></span>
     </button>
-    <span id="etf-spinner" class="spinner"></span>
     <div id="etf-message"></div>
   </div>
-  <div id="linkedin-section" class="mdc-card" style="display: none;">
+
+  <div id="linkedin-section" style="display: none;">
+    <h2>Gerar Conteúdo no LinkedIn</h2>
+    <label for="content-type">Tipo de Conteúdo:</label>
+    <select id="content-type" class="mdc-select">
+      <option value="POST">Post</option>
+      <option value="ARTICLE">Artigo</option>
+    </select>
+    <div id="article-title-section" style="display: none; margin-top: 10px;">
+      <label for="article-title">Título do Artigo:</label>
+      <input type="text" id="article-title" class="mdc-text-field" maxlength="100" placeholder="Digite o título do artigo">
+    </div>
     <button id="linkedin-button" class="mdc-button mdc-button--raised" onclick="generateLinkedInPost()">
-      <span class="mdc-button__label">Gerar Post no LinkedIn</span>
+      Gerar Conteúdo
+      <span id="linkedin-spinner" class="spinner"></span>
     </button>
-    <span id="linkedin-spinner" class="spinner"></span>
-    <label for="linkedin-message" class="mdc-text-field__label">Post gerado (edite se desejar):</label>
-    <textarea id="linkedin-message" class="mdc-text-field__input" readonly></textarea>
-    <button id="clear-asterisks-button" class="mdc-button mdc-button--outlined" onclick="clearAsterisks()" style="margin-top: 10px;">
-      <span class="mdc-button__label">Limpar Asteriscos</span>
+    <p>Conteúdo gerado (edite se desejar):</p>
+    <textarea id="linkedin-message"></textarea>
+    <button id="clear-asterisks-button" class="mdc-button mdc-button--outlined" onclick="clearAsterisks()">Limpar Asteriscos</button>
+    <button id="publish-linkedin-button" class="mdc-button mdc-button--raised" onclick="publishLinkedInPost()" style="display: none;">
+      Publicar no LinkedIn
+      <span id="publish-linkedin-spinner" class="spinner"></span>
     </button>
-    <button id="publish-linkedin-button" class="mdc-button mdc-button--raised" onclick="publishLinkedInPost()" style="margin-top: 10px; display: none;">
-      <span class="mdc-button__label">Publicar no LinkedIn</span>
-    </button>
-    <span id="publish-linkedin-spinner" class="spinner"></span>
-    <button id="linkedin-image-button" class="mdc-button mdc-button--raised" onclick="generateLinkedInPostImage()" style="display: none;">
-      <span class="mdc-button__label">Gerar Imagem para o Post</span>
-    </button>
-    <span id="linkedin-image-spinner" class="spinner"></span>
-    <p id="linkedin-image-message"></p>
-    <img id="linkedin-image-preview" style="display: none;" alt="Imagem gerada pro post do LinkedIn">
     <p id="publish-linkedin-message"></p>
+    <button id="linkedin-image-button" class="mdc-button mdc-button--raised" onclick="generateLinkedInPostImage()" style="display: none;">
+      Gerar Imagem para o Conteúdo
+      <span id="linkedin-image-spinner" class="spinner"></span>
+    </button>
+    <p id="linkedin-image-message"></p>
+    <img id="linkedin-image-preview" style="display: none;" alt="Imagem gerada para o LinkedIn">
   </div>
-  <p id="mensagem"></p>
+
+  <script src="https://unpkg.com/@material/mdc-ripple@13.0.0/dist/mdc-ripple.min.js"></script>
+  <script src="script.js" type="module"></script>
 </body>
 </html>
