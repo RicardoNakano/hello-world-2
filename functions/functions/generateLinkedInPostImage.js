@@ -2,6 +2,14 @@ const functions = require('firebase-functions');
 const axios = require('axios');
 require('dotenv').config();
 
+// Função para sanitizar texto, removendo escapes hexadecimais inválidos
+const sanitizeText = (text) => {
+  return text
+    .replace(/\\u[dD][0-9a-fA-F]{2}\b/g, '') // Remove escapes incompletos como \ud83d
+    .replace(/[^\x20-\x7E\n\r\t]/g, '') // Remove caracteres fora do ASCII imprimível
+    .slice(0, 500); // Limita a 500 caracteres
+};
+
 // Função para gerar uma imagem ilustrativa para o post do LinkedIn
 const generateLinkedInPostImage = functions.https.onRequest(async (request, response) => {
   response.set('Access-Control-Allow-Origin', '*');
@@ -21,7 +29,8 @@ const generateLinkedInPostImage = functions.https.onRequest(async (request, resp
 
   try {
     // Receber o texto do post do corpo da requisição
-    const postContent = request.body.postContent;
+    let postContent = request.body.postContent;
+    postContent = sanitizeText(postContent); // Sanitizar o texto do post
 
     console.log('Received postContent:', postContent); // Log pra verificar o postContent
 
