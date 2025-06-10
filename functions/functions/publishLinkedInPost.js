@@ -102,12 +102,12 @@ const publishLinkedInPost = functions.https.onRequest(async (request, response) 
             "shareCommentary": {
               "text": postContent
             },
-            "shareMediaCategory": "ARTICLE",
+            "shareMediaCategory": "NONE",
             "media": [
               {
                 "status": "READY",
                 "description": {
-                  "text": "Image for LinkedIn article"
+                  "text": "Cover image for LinkedIn article"
                 },
                 "media": assetUrn,
                 "title": {
@@ -158,13 +158,16 @@ const publishLinkedInPost = functions.https.onRequest(async (request, response) 
     // Passo 4: Salvar no Firestore
     const db = admin.firestore();
     const linkedinPostsRef = db.collection('linkedin_posts').doc();
+    const timestamp = process.env.FUNCTIONS_EMULATOR
+      ? new Date()
+      : admin.firestore().FieldValue.serverTimestamp();
     await linkedinPostsRef.set({
       postId: postId,
       content: postContent,
       type: contentType,
       articleTitle: contentType === 'ARTICLE' ? articleTitle : null,
       imageUrl: imageUrl,
-      createdAt: admin.firestore.FieldValue.serverTimestamp()
+      createdAt: timestamp
     });
 
     console.log('Post/Article saved to Firestore with ID:', linkedinPostsRef.id);
