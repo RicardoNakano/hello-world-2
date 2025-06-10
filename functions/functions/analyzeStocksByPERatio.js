@@ -54,19 +54,15 @@ const analyzeStocksByPERatio = functions.https.onRequest(async (request, respons
     // Buscar lista de ações se não estiver em cache
     if (!companies) {
       companies = [];
-      const exchanges = ['US']; // NYSE e NASDAQ
-      for (const exchange of exchanges) {
-        const symbolUrl = `https://finnhub.io/api/v1/stock/symbol?exchange=${exchange}&token=${process.env.FINNHUB_API_KEY}`;
-        const symbolResponse = await axios.get(symbolUrl);
-        companies.push(...symbolResponse.data);
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Pausa para limite de chamadas
-      }
-
-      // Salvar no Firestore
-      await db.collection('stock_cache').doc('us_stocks').set({ companies, timestamp: admin.firestore.FieldValue.serverTimestamp() });
+      const symbolUrl = `https://finnhub.io/api/v1/stock/symbol?exchange=US&token=${process.env.FINNHUB_API_KEY}`;
+      const symbolResponse = await axios.get(symbolUrl);
+      companies = symbolResponse.data;
+      await db.collection('stock_cache').doc('us_stocks').set({
+        companies,
+        timestamp: admin.firestore.FieldValue.serverTimestamp()
+      });
     }
 
-    // Organizar empresas por indústria BESST
     const results = {};
     for (const category in industryMapping) {
       results[category] = [];
@@ -74,7 +70,7 @@ const analyzeStocksByPERatio = functions.https.onRequest(async (request, respons
       const industryPERatio = industryPERatios[category] || 0;
 
       // Filtrar empresas por indústria
-      const filteredCompanies = companies.filter(company => {
+      let filteredCompanies = companies.filter(company => {
         const industry = company.finnhubIndustry || '';
         if (category === 'Transmissão') {
           return finnhubIndustries.includes(industry) && company.description?.toLowerCase().includes('transmission');
@@ -82,43 +78,60 @@ const analyzeStocksByPERatio = functions.https.onRequest(async (request, respons
         return finnhubIndustries.includes(industry);
       });
 
-      // Processar em lotes para respeitar limite de 60 chamadas/minuto
+      // Obter market cap para ordenar
+      const companiesWithMarketCap = [];
       for (let i = 0; i < filteredCompanies.length; i += 10) {
         const batch = filteredCompanies.slice(i, i + 10);
         const promises = batch.map(async company => {
           try {
-            const quoteUrl = `https://finnhub.io/api/v1/quote?symbol=${company.symbol}&token=${process.env.FINNHUB_API_KEY}`;
-            const metricsUrl = `https://finnhub.io/api/v1/stock/metric?symbol=${company.symbol}&metric=valuation&token=${process.env.FINNHUB_API_KEY}`;
-
-            const [quoteResponse, metricsResponse] = await Promise.all([
-              axios.get(quoteUrl),
-              axios.get(metricsUrl)
-            ]);
-
-            const quoteData = quoteResponse.data;
-            const metricsData = metricsResponse.data.metric || {};
-
-            const price = parseFloat(quoteData.c) || 0;
-            const peRatio = parseFloat(metricsData.peAnnual) || 0;
-            const signal = peRatio > 0 && peRatio < industryPERatio ? '✔' : '✘';
-
-            return {
-              name: company.displaySymbol || company.description || company.symbol,
-              ticker: company.symbol,
-              price: price.toFixed(2),
-              peRatio: peRatio.toFixed(2),
-              industryPERatio: industryPERatio.toFixed(2),
-              signal
-            };
+            const profileUrl = `https://finnhub.io/api/v1/company/profile2?symbol=${company.symbol}&token=${process.env.FINNHUB_API_KEY}`;
+            const profileResponse = await axios.get(profileUrl);
+            const marketCap = parseFloat(profileResponse.data.marketCapitalization) || 0;
+            return { ...company, marketCap };
           } catch (error) {
-            console.warn(`Erro ao processar ${company.symbol}: ${error.message}`);
+            console.warn(`Erro ao obter market cap para ${company.symbol}: ${error.message}`);
             return null;
           }
         });
 
         const batchResults = await Promise.all(promises);
-        results[category].push(...batchResults.filter(result => result));
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Pausa para limite de chamadas
+        companiesWithMarketCap.push(...batchResults.filter(result => result && result.marketCap > 0));
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Pausa de 2 segundos
+      }
+
+      // Ordenar por market cap e pegar as 5 maiores
+      const topCompanies = companiesWithMarketCap
+        .sort((a, b) => b.marketCap - a.marketCap)
+        .slice(0, 5);
+
+      // Obter preço e P/E para as top 5
+      for (const company of topCompanies) {
+        const quoteUrl = `https://finnhub.io/api/v1/quote?symbol=${company.symbol}&token=${process.env.FINNHUB_API_KEY}`;
+        const metricsUrl = `https://finnhub.io/api/v1/stock/metric?symbol=${company.symbol}&metric=valuation&token=${process.env.FINNHUB_API_KEY}`;
+
+        const [quoteResponse, metricsResponse] = await Promise.all([
+          axios.get(quoteUrl),
+          axios.get(metricsUrl)
+        ]);
+
+        const quoteData = quoteResponse.data;
+        const metricsData = metricsResponse.data.metric || {};
+
+        const price = parseFloat(quoteData.c) || 0;
+        const peRatio = parseFloat(metricsData.peAnnual) || 0;
+        const signal = peRatio > 0 && peRatio < industryPERatio ? '✔' : '✘';
+
+        results[category].push({
+          name: company.displaySymbol || company.description || company.symbol,
+          ticker: company.symbol,
+          price: price.toFixed(2),
+          peRatio: peRatio.toFixed(2),
+          industryPERatio: industryPERatio.toFixed(2),
+          signal,
+          marketCap: company.marketCap.toFixed(2) // Para depuração
+        });
+
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Pausa de 2 segundos
       }
     }
 
