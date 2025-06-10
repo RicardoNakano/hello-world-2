@@ -48,7 +48,7 @@ const publishLinkedInPost = functions.https.onRequest(async (request, response) 
     const registerHeaders = {
       'Authorization': `Bearer ${process.env.LINKEDIN_ACCESS_TOKEN}`,
       'X-Restli-Protocol-Version': '2.0.0',
-      'LinkedIn-Version': '202301',
+      'LinkedIn-Version': '202504',
       'Content-Type': 'application/json'
     };
     const registerPayload = {
@@ -82,12 +82,20 @@ const publishLinkedInPost = functions.https.onRequest(async (request, response) 
 
     console.log('Image uploaded successfully to LinkedIn');
 
-    // Passo 3: Criar o post ou artigo no LinkedIn
+    // Passo 3: Obter o URN do tipo image
+    const assetId = assetUrn.split(':').pop(); // Extrai o ID do URN (ex.: D4E22AQFbd-3V_fxXAw)
+    const assetStatusUrl = `https://api.linkedin.com/v2/assets/${assetId}`;
+    const assetStatusResponse = await axios.get(assetStatusUrl, { headers: registerHeaders });
+    const imageUrn = assetStatusResponse.data.recipes.find(recipe => recipe.recipe === 'urn:li:digitalmediaRecipe:feedshare-image')?.asset || `urn:li:image:${assetId}`;
+
+    console.log('Image URN:', imageUrn);
+
+    // Passo 4: Criar o post ou artigo no LinkedIn
     const postUrl = 'https://api.linkedin.com/rest/posts';
     const postHeaders = {
       'Authorization': `Bearer ${process.env.LINKEDIN_ACCESS_TOKEN}`,
       'X-Restli-Protocol-Version': '2.0.0',
-      'LinkedIn-Version': '202301',
+      'LinkedIn-Version': '202504',
       'Content-Type': 'application/json'
     };
     let postPayload;
@@ -105,10 +113,10 @@ const publishLinkedInPost = functions.https.onRequest(async (request, response) 
         },
         "content": {
           "article": {
+            "source": "https://example.com/placeholder", // URL placeholder
             "title": articleTitle,
             "description": postContent.slice(0, 500), // Descrição até 500 caracteres
-            "thumbnail": assetUrn
-            // "source" omitido, pois não temos uma URL de artigo externa
+            "thumbnail": imageUrn
           }
         },
         "lifecycleState": "PUBLISHED",
@@ -128,7 +136,8 @@ const publishLinkedInPost = functions.https.onRequest(async (request, response) 
         "content": {
           "media": {
             "title": "Generated Image",
-            "id": assetUrn
+            "id": imageUrn,
+            "altText": "Image for LinkedIn post"
           }
         },
         "lifecycleState": "PUBLISHED",
@@ -139,7 +148,7 @@ const publishLinkedInPost = functions.https.onRequest(async (request, response) 
     const postResponse = await axios.post(postUrl, postPayload, { headers: postHeaders });
     const postId = postResponse.headers['x-restli-id'];
 
-    // Passo 4: Salvar no Firestore
+    // Passo 5: Salvar no Firestore
     const db = admin.firestore();
     const linkedinPostsRef = db.collection('linkedin_posts').doc();
     const timestamp = process.env.FUNCTIONS_EMULATOR
