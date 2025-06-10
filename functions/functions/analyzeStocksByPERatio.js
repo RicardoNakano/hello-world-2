@@ -2,16 +2,16 @@ const functions = require('firebase-functions');
 const axios = require('axios');
 require('dotenv').config();
 
-// Mapeamento das indústrias BESST para as da FMP
-const industryMapping = {
-  'Bancos': 'Banks - Regional',
-  'Elétricas': 'Utilities - Regulated Electric',
-  'Saneamento': 'Utilities - Regulated Water',
-  'Seguros': 'Insurance - Property & Casualty',
-  'Transmissão': 'Utilities - Regulated Electric' // Foco em empresas de transmissão
+// P/E Ratios médios por indústria (Eqvista, 25/01/2025)
+const industryPERatios = {
+  'Bancos': 13.50,
+  'Elétricas': 22.50,
+  'Saneamento': 23.00,
+  'Seguros': 18.60,
+  'Transmissão': 22.50
 };
 
-// Empresas de exemplo por indústria (pode ser expandido)
+// Empresas de exemplo
 const sampleCompanies = {
   'Bancos': [
     { name: 'JPMorgan Chase & Co.', ticker: 'JPM' },
@@ -34,7 +34,6 @@ const sampleCompanies = {
   ]
 };
 
-// Função para analisar stocks por P/E Ratio
 const analyzeStocksByPERatio = functions.https.onRequest(async (request, response) => {
   response.set('Access-Control-Allow-Origin', '*');
   response.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -52,32 +51,24 @@ const analyzeStocksByPERatio = functions.https.onRequest(async (request, respons
   }
 
   try {
-    // Passo 1: Obter P/E Ratios médios por indústria
-    const industryPERatios = {};
-    const industryUrl = 'https://financialmodelingprep.com/api/v4/industry/price_earnings_ratio?exchange=NYSE,NASDAQ&apikey=' + process.env.FMP_API_KEY;
-    const industryResponse = await axios.get(industryUrl);
-    industryResponse.data.forEach(item => {
-      industryPERatios[item.industry] = parseFloat(item.peRatio) || 0;
-    });
-
-    // Passo 2: Obter dados das ações
     const results = {};
-    for (const [besstCategory, fmpIndustry] of Object.entries(industryMapping)) {
-      results[besstCategory] = [];
-      const companies = sampleCompanies[besstCategory];
-      const industryPERatio = industryPERatios[fmpIndustry] || 0;
+    for (const category in sampleCompanies) {
+      results[category] = [];
+      const companies = sampleCompanies[category];
+      const industryPERatio = industryPERatios[category] || 0;
 
       for (const company of companies) {
-        const quoteUrl = `https://financialmodelingprep.com/api/v3/quote/${company.ticker}?apikey=${process.env.FMP_API_KEY}`;
+        // Usar Yahoo Finance API para preço e P/E (via proxy gratuito)
+        const quoteUrl = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${company.ticker}`;
         const quoteResponse = await axios.get(quoteUrl);
-        const quoteData = quoteResponse.data[0];
+        const quoteData = quoteResponse.data.quoteResponse.result[0];
 
         if (quoteData) {
-          const price = parseFloat(quoteData.price) || 0;
-          const peRatio = parseFloat(quoteData.pe) || 0;
+          const price = parseFloat(quoteData.regularMarketPrice) || 0;
+          const peRatio = parseFloat(quoteData.trailingPE) || 0;
           const signal = peRatio > 0 && peRatio < industryPERatio ? '✔' : '✘';
 
-          results[besstCategory].push({
+          results[category].push({
             name: company.name,
             ticker: company.ticker,
             price: price.toFixed(2),
@@ -89,7 +80,6 @@ const analyzeStocksByPERatio = functions.https.onRequest(async (request, respons
       }
     }
 
-    // Passo 3: Retornar resultados
     response.status(200).send({
       success: true,
       message: 'Stock analysis completed',
@@ -99,7 +89,7 @@ const analyzeStocksByPERatio = functions.https.onRequest(async (request, respons
     console.error('Error analyzing stocks:', error);
     response.status(500).send({
       success: false,
-      message: 'Error analyzing stocks: ' + (error.response?.data?.message || error.message)
+      message: 'Error analyzing stocks: ' + error.message
     });
   }
 });

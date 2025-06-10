@@ -22,6 +22,7 @@ exports.analyzeETFs = require('./functions/analyzeETFsExport');
 exports.generateLinkedInPost = require('./functions/generateLinkedInPost');
 exports.generateLinkedInPostImage = require('./functions/generateLinkedInPostImage');
 exports.publishLinkedInPost = require('./functions/publishLinkedInPost');
+exports.analyzeStocksByPERatio = require('./functions/analyzeStocksByPERatio');
 
 /*
 const functions = require('firebase-functions');
