@@ -83,7 +83,7 @@ const publishLinkedInPost = functions.https.onRequest(async (request, response) 
     console.log('Image uploaded successfully to LinkedIn');
 
     // Passo 3: Criar o post ou artigo no LinkedIn
-    const postUrl = 'https://api.linkedin.com/v2/ugcPosts';
+    const postUrl = 'https://api.linkedin.com/rest/posts';
     const postHeaders = {
       'Authorization': `Bearer ${process.env.LINKEDIN_ACCESS_TOKEN}`,
       'X-Restli-Protocol-Version': '2.0.0',
@@ -96,59 +96,43 @@ const publishLinkedInPost = functions.https.onRequest(async (request, response) 
       // Payload para artigo
       postPayload = {
         "author": process.env.LINKEDIN_USER_URN,
-        "lifecycleState": "PUBLISHED",
-        "specificContent": {
-          "com.linkedin.ugc.ShareContent": {
-            "shareCommentary": {
-              "text": postContent
-            },
-            "shareMediaCategory": "NONE",
-            "media": [
-              {
-                "status": "READY",
-                "description": {
-                  "text": "Cover image for LinkedIn article"
-                },
-                "media": assetUrn,
-                "title": {
-                  "text": articleTitle
-                }
-              }
-            ]
+        "commentary": postContent.slice(0, 200), // Resumo curto para o comentário
+        "visibility": "PUBLIC",
+        "distribution": {
+          "feedDistribution": "MAIN_FEED",
+          "targetEntities": [],
+          "thirdPartyDistributionChannels": []
+        },
+        "content": {
+          "article": {
+            "title": articleTitle,
+            "description": postContent.slice(0, 500), // Descrição até 500 caracteres
+            "thumbnail": assetUrn
+            // "source" omitido, pois não temos uma URL de artigo externa
           }
         },
-        "visibility": {
-          "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"
-        }
+        "lifecycleState": "PUBLISHED",
+        "isReshareDisabledByAuthor": false
       };
     } else {
       // Payload para post
       postPayload = {
         "author": process.env.LINKEDIN_USER_URN,
-        "lifecycleState": "PUBLISHED",
-        "specificContent": {
-          "com.linkedin.ugc.ShareContent": {
-            "shareCommentary": {
-              "text": postContent
-            },
-            "shareMediaCategory": "IMAGE",
-            "media": [
-              {
-                "status": "READY",
-                "description": {
-                  "text": "Image generated for LinkedIn post"
-                },
-                "media": assetUrn,
-                "title": {
-                  "text": "Generated Image"
-                }
-              }
-            ]
+        "commentary": postContent,
+        "visibility": "PUBLIC",
+        "distribution": {
+          "feedDistribution": "MAIN_FEED",
+          "targetEntities": [],
+          "thirdPartyDistributionChannels": []
+        },
+        "content": {
+          "media": {
+            "title": "Generated Image",
+            "id": assetUrn
           }
         },
-        "visibility": {
-          "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"
-        }
+        "lifecycleState": "PUBLISHED",
+        "isReshareDisabledByAuthor": false
       };
     }
 
@@ -181,7 +165,7 @@ const publishLinkedInPost = functions.https.onRequest(async (request, response) 
     console.error('Error publishing LinkedIn post/article:', error);
     response.status(500).send({
       success: false,
-      message: 'Error publishing LinkedIn post/article: ' + error.message
+      message: 'Error publishing LinkedIn post/article: ' + (error.response?.data?.message || error.message)
     });
   }
 });
