@@ -23,7 +23,7 @@ const industryMapping = {
   'Elétricas': ['Utilities—Regulated Electric'],
   'Saneamento': ['Utilities—Regulated Water'],
   'Seguros': ['Insurance—Property & Casualty', 'Insurance—Life'],
-  'Transmissão': ['Utilities—Regulated Electric'] // Filtrar por descrição para transmissão
+  'Transmissão': ['Utilities—Regulated Electric']
 };
 
 const analyzeStocksByPERatio = functions.https.onRequest(async (request, response) => {
@@ -48,16 +48,19 @@ const analyzeStocksByPERatio = functions.https.onRequest(async (request, respons
     }
 
     const db = admin.firestore();
-    const cacheDoc = await db.collection('stock_cache').doc('us_stocks').get();
+    const cacheDoc = await db.collection('stock_cache').doc('us_stocks_besst').get();
     let companies = cacheDoc.exists ? cacheDoc.data().companies : null;
 
     // Buscar lista de ações se não estiver em cache
     if (!companies) {
-      companies = [];
       const symbolUrl = `https://finnhub.io/api/v1/stock/symbol?exchange=US&token=${process.env.FINNHUB_API_KEY}`;
       const symbolResponse = await axios.get(symbolUrl);
-      companies = symbolResponse.data;
-      await db.collection('stock_cache').doc('us_stocks').set({
+      companies = symbolResponse.data.filter(company => {
+        const industry = company.finnhubIndustry || '';
+        return Object.values(industryMapping).flat().includes(industry);
+      });
+
+      await db.collection('stock_cache').doc('us_stocks_besst').set({
         companies,
         timestamp: admin.firestore.FieldValue.serverTimestamp()
       });
@@ -80,8 +83,8 @@ const analyzeStocksByPERatio = functions.https.onRequest(async (request, respons
 
       // Obter market cap para ordenar
       const companiesWithMarketCap = [];
-      for (let i = 0; i < filteredCompanies.length; i += 10) {
-        const batch = filteredCompanies.slice(i, i + 10);
+      for (let i = 0; i < filteredCompanies.length; i += 5) {
+        const batch = filteredCompanies.slice(i, i + 5);
         const promises = batch.map(async company => {
           try {
             const profileUrl = `https://finnhub.io/api/v1/company/profile2?symbol=${company.symbol}&token=${process.env.FINNHUB_API_KEY}`;
@@ -109,27 +112,30 @@ const analyzeStocksByPERatio = functions.https.onRequest(async (request, respons
         const quoteUrl = `https://finnhub.io/api/v1/quote?symbol=${company.symbol}&token=${process.env.FINNHUB_API_KEY}`;
         const metricsUrl = `https://finnhub.io/api/v1/stock/metric?symbol=${company.symbol}&metric=valuation&token=${process.env.FINNHUB_API_KEY}`;
 
-        const [quoteResponse, metricsResponse] = await Promise.all([
-          axios.get(quoteUrl),
-          axios.get(metricsUrl)
-        ]);
+        try {
+          const [quoteResponse, metricsResponse] = await Promise.all([
+            axios.get(quoteUrl),
+            axios.get(metricsUrl)
+          ]);
 
-        const quoteData = quoteResponse.data;
-        const metricsData = metricsResponse.data.metric || {};
+          const quoteData = quoteResponse.data;
+          const metricsData = metricsResponse.data.metric || {};
 
-        const price = parseFloat(quoteData.c) || 0;
-        const peRatio = parseFloat(metricsData.peAnnual) || 0;
-        const signal = peRatio > 0 && peRatio < industryPERatio ? '✔' : '✘';
+          const price = parseFloat(quoteData.c) || 0;
+          const peRatio = parseFloat(metricsData.peAnnual) || 0;
+          const signal = peRatio > 0 && peRatio < industryPERatio ? '✔' : '✘';
 
-        results[category].push({
-          name: company.displaySymbol || company.description || company.symbol,
-          ticker: company.symbol,
-          price: price.toFixed(2),
-          peRatio: peRatio.toFixed(2),
-          industryPERatio: industryPERatio.toFixed(2),
-          signal,
-          marketCap: company.marketCap.toFixed(2) // Para depuração
-        });
+          results[category].push({
+            name: company.displaySymbol || company.description || company.symbol,
+            ticker: company.symbol,
+            price: price.toFixed(2),
+            peRatio: peRatio.toFixed(2),
+            industryPERatio: industryPERatio.toFixed(2),
+            signal
+          });
+        } catch (error) {
+          console.warn(`Erro ao processar ${company.symbol}: ${error.message}`);
+        }
 
         await new Promise(resolve => setTimeout(resolve, 2000)); // Pausa de 2 segundos
       }
