@@ -62,7 +62,17 @@ const generateLinkedInPost = functions.https.onRequest(async (request, response)
       - Emojis, line breaks, bullet points, actionable tips, and a call to action
       - No double asterisks (**) for bold formatting
       - Content related to the latest world technology, US macroeconomy (inflation, FED interest rates, or unemployment), or politics news that went viral in the last 7 days
-      - Avoid repeating themes from these recent posts: "${recentThemes || 'None'}"
+      - You MUST AVOID BY ANY MEANS repeating themes from these recent posts: "${recentThemes || 'None'}"
+      - The article MUST cover NEW grounds and not repeat themes from the recent posts
+      - If it overlaps, especially in economics or politics, revise the post to focus on unexplored aspects or different angles.
+      - The article should be suitable for a professional audience on LinkedIn
+      - The article should be written in a way that it can be posted directly on LinkedIn
+      - The article must be written in English
+      - IT MUST BE a new and unique article
+      - The article should be structured with a clear introduction, body, and conclusion
+      - The article must be engaging, informative, and suitable for a professional audience
+      - Use a friendly and professional tone
+      - Include a call to action at the end, encouraging readers to share their thoughts or experiences
       Format the response as JSON: {"title": "Article Title", "body": "Article Body"}
     `;
 
